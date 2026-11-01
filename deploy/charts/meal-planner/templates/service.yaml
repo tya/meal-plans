@@ -2,7 +2,7 @@
 # LoadBalancer (MetalLB), same convention as argocd-server and tynet-cloud-init:
 # no ingress controller in this cluster, so each app that needs an inbound
 # port gets its own external IP and terminates TLS itself. The A record
-# (mealplans.tynet.us -> this IP) is added by hand in UniFi, LAN-only, same
+# (meal-plans.tynet.us -> this IP) is added by hand in UniFi, LAN-only, same
 # as those two.
 apiVersion: v1
 kind: Service

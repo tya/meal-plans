@@ -5,4 +5,4 @@ type: application
 version: 0.1.0
 appVersion: "0.1.0"
 keywords: [grocery, slack, kroger]
-home: https://github.com/tya/claude-grocery-kroger-agent
+home: https://github.com/tya/meal-plans

@@ -41,7 +41,7 @@ env:
 statusServer:
   enabled: true
   port: 8443
-  hostname: mealplans.tynet.us
+  hostname: meal-plans.tynet.us
   tls:
     secretName: meal-planner-tls
     issuerName: letsencrypt-cloudflare

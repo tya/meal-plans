@@ -1,6 +1,6 @@
 /**
  * The bot talks to Slack over Socket Mode and needs no inbound port for that.
- * This server exists only so mealplans.tynet.us has something to answer with —
+ * This server exists only so meal-plans.tynet.us has something to answer with —
  * a health check and a one-line status page, nothing more. TLS cert and key
  * come from a cert-manager Secret mounted by the chart; if they're not
  * present (local dev), the server simply doesn't start.

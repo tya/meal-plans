@@ -34,6 +34,14 @@ export interface StapleOptions {
   minBaskets?: number;
   /** Safety valve: never add more than this many lines. */
   limit?: number;
+  /**
+   * UPCs to leave off the list even though they're due — already sent to
+   * Kroger for this week by another run. The Cart API only adds, never reads
+   * back or clears, so this is what keeps a staples-only run and the full
+   * weekly plan from doubling the same staple if both get approved the same
+   * week.
+   */
+  excludeUpcs?: Set<string>;
 }
 
 const DAY_MS = 86_400_000;
@@ -105,12 +113,14 @@ export function stapleItems(
   options: StapleOptions = {}
 ): ShoppingItem[] {
   const limit = options.limit ?? 40;
+  const excludeUpcs = options.excludeUpcs;
   const covered = new Set(existing.map((i) => i.canonicalName));
   const items: ShoppingItem[] = [];
 
   for (const { row, due, reason } of decisions) {
     if (!due || items.length >= limit) continue;
     if (!row.description) continue; // unnamed UPC: nothing sensible to show
+    if (excludeUpcs?.has(row.upc)) continue;
 
     const canonical = normalizeIngredientName(row.description);
     if (covered.has(canonical)) continue;

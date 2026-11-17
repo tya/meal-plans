@@ -65,6 +65,8 @@ export interface ReportOutcome {
 export interface SlackDeps {
   /** Build (or rebuild) the week's plan. */
   buildPlan: (weekStart?: string) => Promise<PendingWeek>;
+  /** Skip meal planning: just whatever staples are due right now. */
+  buildStaplesPlan: () => Promise<PendingWeek>;
   /** Apply the edits and return the revised plan. */
   applyEdits: (current: PendingWeek, ops: EditOp[]) => Promise<PendingWeek>;
   /** Remember a bad product match and pick something else for that line. */
@@ -188,6 +190,24 @@ export function createSlackApp(deps: SlackDeps) {
   }
 
   /**
+   * Skips meal planning entirely: posts whatever staples are due right now,
+   * for a household doing its own dinner planning this week. Otherwise
+   * identical to postPlan — same briefing, same pending lifecycle, same
+   * approve/edit/cancel handling downstream, because none of that cares
+   * whether the plan came with meals attached.
+   */
+  async function postStaples(channel: string): Promise<void> {
+    if (!briefed.has(channel)) await postHelp(channel);
+    const built = await deps.buildStaplesPlan();
+    await app.client.chat.postMessage({
+      channel,
+      text: 'Staples due right now',
+      blocks: blocksFor(built),
+    });
+    pending = built;
+  }
+
+  /**
    * Slack delivers a message that mentions the bot twice — once as `app_mention`
    * and once as an ordinary channel message — and both handlers are needed,
    * because only one of the two subscriptions may be enabled. Both carry the
@@ -208,6 +228,9 @@ export function createSlackApp(deps: SlackDeps) {
 
   /** A request for a fresh plan, not a message that merely says "plan". */
   const PLAN_REQUEST = /^(?:new plan|re-?plan|plan(?: (?:the |this |next )?week)?|what'?s for dinner)[?.!]*$/i;
+
+  /** Skip the meal plan — just the staples, so the household can plan dinners itself. */
+  const STAPLES_REQUEST = /^(?:just (?:add )?(?:my )?staples|staples only|add (?:my )?staples(?: to (?:the )?cart)?)[?.!]*$/i;
 
   app.event('app_mention', async ({ event, say }) => {
     const { user, channel, text, ts } = event as unknown as
@@ -264,6 +287,11 @@ export function createSlackApp(deps: SlackDeps) {
 
     if (PLAN_REQUEST.test(text.trim())) {
       await postPlan(channel);
+      return;
+    }
+
+    if (STAPLES_REQUEST.test(text.trim())) {
+      await postStaples(channel);
       return;
     }
 

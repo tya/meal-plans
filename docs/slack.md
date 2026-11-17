@@ -79,6 +79,7 @@ Then DM the bot `plan`.
 | You say | It does |
 | --- | --- |
 | `plan` | Builds and posts this week's plan |
+| `just staples` | Skips meal planning — posts just the staples due right now |
 | `ok`, `yes`, `looks good`, 👍 | Fills the Kroger cart, tells you to check out in the app |
 | `swap tue for tacos` | Replaces Tuesday's meal, re-prices, reposts |
 | `no cilantro` | Drops that item from the list |

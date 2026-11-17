@@ -17,6 +17,7 @@ export const HELP_REQUEST =
 /** Left column is what you type; right column is what happens. */
 const COMMANDS: Array<[said: string, does: string]> = [
   ['plan', "build this week's plan"],
+  ['just staples', 'skip meal planning — add due staples to the cart'],
   ['ok / yes / looks good', 'approve it and fill the cart'],
   ['swap wed for tacos', "replace one night's dinner"],
   ['skip thursday', 'skip cooking that night'],

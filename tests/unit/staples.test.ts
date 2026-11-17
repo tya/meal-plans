@@ -137,4 +137,17 @@ describe('turning them into lines', () => {
     const items = stapleItems(decisions([row({ upc: 'a' }), row({ upc: 'b' })]), []);
     expect(items).toHaveLength(1);
   });
+
+  it('leaves out a UPC already sent to Kroger this week', () => {
+    // A staples-only run and the full weekly plan both call decideStaples/
+    // stapleItems independently; excludeUpcs is what keeps them from both
+    // adding the same due staple to a Cart API that can only add, never
+    // dedupe.
+    const rows = [
+      row({ upc: 'already-added', description: 'Milk' }),
+      row({ upc: 'still-due', description: 'Eggs' }),
+    ];
+    const items = stapleItems(decisions(rows), [], { excludeUpcs: new Set(['already-added']) });
+    expect(items.map((i) => i.upc)).toEqual(['still-due']);
+  });
 });

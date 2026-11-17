@@ -20,7 +20,7 @@ import {
   mergeFeeds,
   type CalendarFeed,
 } from '../services/night-classifier.service.js';
-import { planWeek, type ShoppingItem } from '../services/week-planner.service.js';
+import { planWeek, type ShoppingItem, type WeekPlan } from '../services/week-planner.service.js';
 import { applyEdits } from '../services/plan-edit.service.js';
 import { matchItem, summarizeMatches, type ProductMatch } from '../services/product-match.service.js';
 import { decideStaples, stapleItems } from '../services/staples.service.js';
@@ -138,14 +138,26 @@ async function main(): Promise<void> {
     return warnings;
   }
 
+  /**
+   * UPCs already sent to Kroger for this week, win or lose. The Cart API can
+   * only add, never read back what's there, so this is the one way to know —
+   * and the one way a staples-only run and the full weekly plan can avoid
+   * doubling the same staple if both get approved the same week.
+   */
+  function alreadyAddedUpcs(weekStart: string): Set<string> {
+    const rows = db.prepare(`SELECT upc FROM cart_ledger WHERE week_start = ?`).all(weekStart) as { upc: string }[];
+    return new Set(rows.map((r) => r.upc));
+  }
+
   async function buildPlan(weekStart = nextSunday()): Promise<PendingWeek> {
     const feeds = JSON.parse(readFileSync(EVENTS_FILE, 'utf8')) as CalendarFeed[];
     const week = applyCookQuota(assignLeftovers(classifyWeek(weekStart, mergeFeeds(feeds))));
     const planned = planWeek(weekStart, week, recipeRepo.search({ limit: 200 }));
 
-    // Everything the household buys on a rhythm, due this week.
+    // Everything the household buys on a rhythm, due this week — minus
+    // whatever a staples-only run already sent to Kroger for this same week.
     const due = decideStaples(staplesRepo.candidates(), { asOf: new Date(weekStart) });
-    const staples = stapleItems(due, planned.items);
+    const staples = stapleItems(due, planned.items, { excludeUpcs: alreadyAddedUpcs(weekStart) });
     const plan = { ...planned, items: [...planned.items, ...staples] };
 
     const report = summarizeMatches(await matchList(plan));
@@ -165,6 +177,36 @@ async function main(): Promise<void> {
     };
   }
 
+  /**
+   * Skips meal planning entirely: just whatever staples are due, right now,
+   * for whoever wants to plan dinners themselves this week. Bucketed under
+   * the coming Sunday purely so it shares cart_ledger/previousOrder with a
+   * normal week — the "already ordered this week, say ok twice" guard and
+   * the excludeUpcs dedup both depend on that shared key.
+   */
+  async function buildStaplesPlan(): Promise<PendingWeek> {
+    const weekStart = nextSunday();
+    const due = decideStaples(staplesRepo.candidates(), { asOf: new Date() });
+    const items = stapleItems(due, [], { excludeUpcs: alreadyAddedUpcs(weekStart) });
+
+    const plan: WeekPlan = { weekStart, meals: [], unplanned: [], items, warnings: [] };
+    const report = summarizeMatches(await matchList(plan));
+
+    return {
+      week: [],
+      plan: { ...plan, warnings: warningsFor(plan, report) },
+      matches: toLineMatches(report.matches),
+      priced: toCartLines(report.matches),
+      summary: {
+        weekStart,
+        cookingNights: 0,
+        estimatedTotal: kroger ? report.total : undefined,
+        softMax: SOFT_MAX,
+        hardMax: HARD_MAX,
+      },
+    };
+  }
+
   const slack = createSlackApp({
     budget: { softMax: SOFT_MAX, hardMax: HARD_MAX },
     async previousOrder(weekStart) {
@@ -177,6 +219,7 @@ async function main(): Promise<void> {
       return row.lines > 0 ? { lines: row.lines, units: row.units, lastAt: row.lastAt ?? 'earlier' } : null;
     },
     buildPlan,
+    buildStaplesPlan,
     async applyEdits(current, ops) {
       const recipes = recipeRepo.search({ limit: 200 });
       const { week, plan, changes, problems } = applyEdits(current.week, current.plan, ops, recipes);

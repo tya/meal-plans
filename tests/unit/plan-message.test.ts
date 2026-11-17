@@ -104,6 +104,17 @@ describe('Slack blocks', () => {
     expect(section.text.text.startsWith('```')).toBe(true);
     expect(section.text.text.endsWith('```')).toBe(true);
   });
+
+  it('skips the empty week table on a staples-only run', () => {
+    const staplesPlan: WeekPlan = { weekStart: '2026-09-27', meals: [], unplanned: [], items: plan.items, warnings: [] };
+    const blocks = renderSlackBlocks([], staplesPlan, { ...summary, cookingNights: 0 });
+    const header = blocks[0] as unknown as { text: { text: string } };
+    expect(header.text.text).toBe('Staples');
+    // No code-block table, but the cost line and actions are still there.
+    expect(JSON.stringify(blocks)).not.toContain('```');
+    const actions = blocks.find((b) => b.type === 'actions') as unknown as { elements: Array<{ action_id: string }> };
+    expect(actions.elements.map((e) => e.action_id)).toEqual(['approve_plan', 'show_list', 'show_help']);
+  });
 });
 
 describe('the week table', () => {

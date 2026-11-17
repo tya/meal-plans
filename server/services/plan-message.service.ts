@@ -164,25 +164,33 @@ function shortReason(reason: string): string {
   return trimmed.length > 34 ? `${trimmed.slice(0, 33).trimEnd()}…` : trimmed;
 }
 
-/** The full plan, as Slack Block Kit. */
+/**
+ * The full plan, as Slack Block Kit. A staples-only run (no meals, no week)
+ * skips the day/dinner/time table entirely — there is nothing to put in it.
+ */
 export function renderSlackBlocks(week: NightPlan[], plan: WeekPlan, summary: PlanSummary): SlackBlock[] {
   const blocks: SlackBlock[] = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: `Meal plan — week of ${summary.weekStart}` },
+      text: {
+        type: 'plain_text',
+        text: week.length > 0 ? `Meal plan — week of ${summary.weekStart}` : 'Staples',
+      },
     },
   ];
 
-  blocks.push({
-    type: 'section',
-    text: { type: 'mrkdwn', text: `\`\`\`\n${renderWeekTable(week, plan)}\n\`\`\`` },
-  });
+  if (week.length > 0) {
+    blocks.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: `\`\`\`\n${renderWeekTable(week, plan)}\n\`\`\`` },
+    });
 
-  const notes = weekNotes(week);
-  if (notes.length > 0) {
-    const shown = notes.slice(0, 4).join(' · ');
-    const more = notes.length > 4 ? ` · +${notes.length - 4} more` : '';
-    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `${shown}${more}` }] });
+    const notes = weekNotes(week);
+    if (notes.length > 0) {
+      const shown = notes.slice(0, 4).join(' · ');
+      const more = notes.length > 4 ? ` · +${notes.length - 4} more` : '';
+      blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `${shown}${more}` }] });
+    }
   }
 
   const budget = summary.estimatedTotal;

@@ -9,6 +9,9 @@ kind: Service
 metadata:
   name: {{ include "meal-planner.fullname" . }}-status
   labels: {{- include "meal-planner.labels" . | nindent 4 }}
+  {{- with .Values.statusServer.service.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   type: LoadBalancer
   selector: {{- include "meal-planner.selectorLabels" . | nindent 4 }}

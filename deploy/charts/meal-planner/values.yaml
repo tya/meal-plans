@@ -45,6 +45,11 @@ statusServer:
   tls:
     secretName: meal-planner-tls
     issuerName: letsencrypt-cloudflare
+  service:
+    # Extra annotations for the status Service, e.g. to pin a MetalLB
+    # address/pool (metallb.universe.tf/loadBalancerIPs). Left empty so the
+    # chart stays cluster-agnostic; the deploying side sets it.
+    annotations: {}
 
 config:
   TZ: America/Denver

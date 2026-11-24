@@ -50,6 +50,11 @@ statusServer:
     # address/pool (metallb.universe.tf/loadBalancerIPs). Left empty so the
     # chart stays cluster-agnostic; the deploying side sets it.
     annotations: {}
+    # Whether Kubernetes also opens a NodePort for this LoadBalancer Service
+    # (its default). Load balancers that deliver straight to the pods, like
+    # MetalLB in L2 mode, don't need one; set false there so the Service
+    # isn't also reachable on every node address.
+    allocateNodePorts: true
 
 config:
   TZ: America/Denver

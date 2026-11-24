@@ -185,6 +185,19 @@ The test suite includes 92 tests across 6 files:
 - **Unit tests** - ingredient normalizer, unit converter, department classifier, recipe parser
 - **Integration tests** - SQLite database (schema, CRUD, repositories), Kroger API (live, skipped without credentials)
 
+## Releasing
+
+The Slack bot runs on microk8s, deployed by Argo CD from `deploy/charts/meal-planner` on `main` (see [deploy/README.md](deploy/README.md)). Argo syncs the chart but never builds images, so a release is two steps:
+
+1. **Tag it.** Pushing a `v*` tag builds an arm64 image from `deploy/Containerfile`, pushes `ghcr.io/tya/meal-plans:<tag>` and `:latest` ([image.yml](.github/workflows/image.yml)), and publishes a GitHub Release with generated notes ([release.yml](.github/workflows/release.yml)).
+
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+
+2. **Bump the chart.** Once the image is on ghcr.io, set `image.tag` in `deploy/charts/meal-planner/values.yaml` to the new tag and merge. Argo rolls it out.
+
 ## Tech Stack
 
 | Component | Technology |

@@ -64,8 +64,8 @@ An MCP (Model Context Protocol) server for Claude Desktop that provides AI-power
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/seanGSISG/claude-grocery.git
-cd claude-grocery
+git clone git@github.com:tya/meal-plans.git
+cd meal-plans
 npm install
 ```
 
@@ -132,7 +132,7 @@ The core of the plugin is the 8-step grocery list generation engine:
 ## Project Structure
 
 ```
-claude-grocery/
+meal-plans/
   manifest.json          # Desktop Extension manifest
   package.json
   tsconfig.json

@@ -39,6 +39,7 @@ export class KrogerTokenStore {
   private readonly path: string;
   private cached: StoredKrogerToken | null = null;
   private inFlight: Promise<string> | null = null;
+  private lastRefreshError: string | null = null;
 
   constructor(auth: KrogerAuth, path: string = defaultTokenPath()) {
     this.auth = auth;
@@ -114,6 +115,13 @@ export class KrogerTokenStore {
     return this.read()!;
   }
 
+  /** What the health check reports. Reads the file only; never refreshes. */
+  status(): { present: boolean; scope?: string; updatedAt?: string; lastRefreshError: string | null } {
+    const stored = this.read();
+    if (!stored) return { present: false, lastRefreshError: this.lastRefreshError };
+    return { present: true, scope: stored.scope, updatedAt: stored.updatedAt, lastRefreshError: this.lastRefreshError };
+  }
+
   /** A stable fingerprint of the refresh token, safe to log or show in Slack. */
   fingerprint(): string | null {
     const stored = this.read();
@@ -126,8 +134,10 @@ export class KrogerTokenStore {
       const token = await this.auth.refreshAccessToken(refreshToken);
       // Kroger rotates refresh tokens: keep the new one, fall back to the old.
       const saved = this.save({ ...token, refresh_token: token.refresh_token ?? refreshToken });
+      this.lastRefreshError = null;
       return saved.accessToken;
     } catch (error) {
+      this.lastRefreshError = error instanceof Error ? error.message : String(error);
       log('error', 'Kroger customer token refresh failed -- re-authorization needed', error);
       throw error;
     }

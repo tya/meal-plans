@@ -66,9 +66,10 @@ spec:
             {{- end }}
           securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
-          # No liveness/readiness probe: the one failure that matters is a
-          # dropped Slack socket, which Bolt reconnects by itself and which an
-          # HTTP probe against the status server would not notice either way.
+          # No liveness/readiness probe yet. /healthz answers 503 once the
+          # Slack socket has been down past its grace period or SQLite fails,
+          # so it can back one — but only when the status server runs, which
+          # needs the TLS cert mounted.
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}

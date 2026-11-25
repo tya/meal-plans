@@ -89,6 +89,26 @@ describe('KrogerTokenStore', () => {
     expect(auth.calls).toEqual(['r0', 'refresh-1']);
   });
 
+  it('reports a failed refresh until the next one succeeds', async () => {
+    let fail = true;
+    const auth = {
+      async refreshAccessToken() {
+        if (fail) throw new Error('invalid_grant');
+        return { access_token: 'a', refresh_token: 'r1', expires_in: 1800, token_type: 'bearer' };
+      },
+    } as unknown as KrogerAuth;
+    const store = new KrogerTokenStore(auth, file);
+    expect(store.status()).toEqual({ present: false, lastRefreshError: null });
+
+    store.save({ access_token: 'old', refresh_token: 'r0', expires_in: -10, token_type: 'bearer' });
+    await expect(store.getAccessToken()).rejects.toThrow('invalid_grant');
+    expect(store.status()).toMatchObject({ present: true, lastRefreshError: 'invalid_grant' });
+
+    fail = false;
+    await store.getAccessToken();
+    expect(store.status().lastRefreshError).toBeNull();
+  });
+
   it('shares one refresh between concurrent callers', async () => {
     const auth = fakeAuth();
     const store = new KrogerTokenStore(auth, file);

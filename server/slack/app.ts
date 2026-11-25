@@ -501,6 +501,8 @@ export function createSlackApp(deps: SlackDeps) {
 
   return {
     app,
+    /** For the health check, which follows the socket's state events. */
+    receiver,
     ownerDm,
     /** Post the instructions on demand, for the timer's first run. */
     async pushHelp(channel?: string): Promise<void> {

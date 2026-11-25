@@ -27,6 +27,7 @@ import { decideStaples, stapleItems } from '../services/staples.service.js';
 import { applyReplacement, findLine } from '../services/match-feedback.service.js';
 import { createSlackApp, type CartLine, type LineMatch, type PendingWeek } from './app.js';
 import { startStatusServer } from '../http/status-server.js';
+import { checkDatabase, checkKroger, report, watchSlack } from '../http/health.js';
 import { log } from '../utils/logger.js';
 import { nextSunday } from '../utils/week.js';
 
@@ -337,9 +338,18 @@ async function main(): Promise<void> {
     },
   });
 
+  // Subscribe before start(), or the first "connected" is missed.
+  const startedAt = Date.now();
+  const slackHealth = watchSlack(slack.receiver.client);
+
   await slack.app.start();
   log('info', 'Slack bot running (socket mode). DM it "plan" to start.');
-  startStatusServer();
+  startStatusServer(async () =>
+    report(
+      { slack: slackHealth(), database: checkDatabase(db), kroger: await checkKroger(auth, tokens) },
+      startedAt
+    )
+  );
 
   if (process.argv.includes('--push')) {
     await slack.pushWeeklyPlan(process.env.SLACK_CHANNEL);
